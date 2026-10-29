@@ -23,6 +23,7 @@ export default function DiagnosisCard({ b, onEvidence }: { b: Bundle; onEvidence
     );
 
   const rc = report.root_cause;
+  const similarIncidents = report.similar_incidents ?? [];
   const resolves = (id: string) => b.logs.some((l) => l.id === id) || id.startsWith("metric-");
   return (
     <Card title="Likely cause">
@@ -47,10 +48,10 @@ export default function DiagnosisCard({ b, onEvidence }: { b: Bundle; onEvidence
       <ul className="mt-0.5 list-disc pl-4 text-[13px] text-muted">{report.alternatives.map((a) => <li key={a}>{a}</li>)}</ul>
       <h3 className="mt-3 text-xs font-semibold">What this can’t tell you</h3>
       <ul className="mt-0.5 list-disc pl-4 text-[13px] text-muted">{report.limitations.map((a) => <li key={a}>{a}</li>)}</ul>
-      {report.similar_incidents.length > 0 && (
+      {similarIncidents.length > 0 && (
         <>
           <h3 className="mt-3 text-xs font-semibold">Similar past incident <span className="font-normal text-muted">(historical, not from this window)</span></h3>
-          {report.similar_incidents.map((s) => (
+          {similarIncidents.map((s) => (
             <p key={s.id} className="mt-0.5 text-[13px] text-muted"><span className="font-mono text-ink">{s.id}</span> {s.title}. {s.note}</p>
           ))}
         </>
