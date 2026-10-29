@@ -10,8 +10,8 @@ export interface Api {
   demo?: { trigger(): Promise<string>; setFailNext(v: boolean): void; failNext(): boolean };
 }
 
-// Set NEXT_PUBLIC_API_URL (see .env.example) to talk to the FastAPI backend. Unset means seeded demo data.
-const BASE = process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, "");
+// Override NEXT_PUBLIC_API_URL for local development. The hosted API is the default.
+const BASE = (process.env.NEXT_PUBLIC_API_URL || "https://incidentpilot-56op.onrender.com").replace(/\/$/, "");
 export const isLive = !!BASE;
 
 async function http<T>(path: string, init?: RequestInit): Promise<T> {
@@ -23,7 +23,7 @@ async function http<T>(path: string, init?: RequestInit): Promise<T> {
   }
   if (!res.ok) {
     const body = await res.json().catch(() => null);
-    throw new Error(body?.message ?? `Request failed (${res.status})`);
+    throw new Error(body?.error?.message ?? body?.message ?? `Request failed (${res.status})`);
   }
   return res.json();
 }
@@ -34,7 +34,13 @@ const live: Api = {
   async getBundle(id) {
     const [d, logs] = await Promise.all([http<any>(`/api/incidents/${id}`), http<LogEvent[]>(`/api/incidents/${id}/logs`)]);
     const incident: Incident = d.incident ?? d;
-    const investigation = d.latest_investigation_id ? await http<Investigation>(`/api/investigations/${d.latest_investigation_id}`) : undefined;
+    const rawInvestigation = d.latest_investigation_id ? await http<Investigation & { stage?: number | string }>(`/api/investigations/${d.latest_investigation_id}`) : undefined;
+    const investigation = rawInvestigation && {
+      ...rawInvestigation,
+      stage: typeof rawInvestigation.stage === "number"
+        ? rawInvestigation.stage
+        : rawInvestigation.status === "completed" ? 4 : rawInvestigation.status === "running" ? 1 : 0,
+    };
     return {
       incident, logs, investigation,
       audit: d.audit_events ?? [],
